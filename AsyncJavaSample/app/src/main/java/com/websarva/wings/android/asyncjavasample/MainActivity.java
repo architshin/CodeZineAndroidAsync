@@ -1,9 +1,5 @@
 package com.websarva.wings.android.asyncjavasample;
 
-import androidx.annotation.UiThread;
-import androidx.annotation.WorkerThread;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,6 +8,11 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,6 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import androidx.annotation.UiThread;
+import androidx.annotation.WorkerThread;
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * 『Androidアプリ開発の教科書』
@@ -111,6 +116,13 @@ public class MainActivity extends AppCompatActivity {
 		return list;
 	}
 
+	private void showResult(String telop, String desc) {
+		TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
+		TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
+		tvWeatherTelop.setText(telop);
+		tvWeatherDesc.setText(desc);
+	}
+
 	private class ListItemClickListener implements AdapterView.OnItemClickListener {
 		@Override
 		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -123,14 +135,11 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private class WeatherInfoReceiver {
-		@UiThread
 		public void execute(String urlBase, String q, String appId) {
 			Looper mainLooper = Looper.getMainLooper();
 			WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(mainLooper, urlBase, q, appId);
-			Log.i(DEBUG_TAG, "非同期処理開始前");
 			ExecutorService executorService  = Executors.newSingleThreadExecutor();
 			executorService.submit(backgroundReceiver);
-			Log.i(DEBUG_TAG, "非同期処理開始後");
 		}
 	}
 
@@ -144,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
 		}
 		@Override
 		public void run() {
-			Log.i(DEBUG_TAG, "バックグラウンド処理中");
 			HttpURLConnection con = null;
 			InputStream is = null;
 			String result = "";
@@ -182,8 +190,7 @@ public class MainActivity extends AppCompatActivity {
 					}
 				}
 			}
-			Log.i(DEBUG_TAG, "バックグラウンド処理終了\n" + result);
-			WeatherInfoPostExecuter postExecuter = new WeatherInfoPostExecuter();
+			WeatherInfoPostExecuter postExecuter = new WeatherInfoPostExecuter(result);
 			_handler.post(postExecuter);
 		}
 
@@ -208,9 +215,30 @@ public class MainActivity extends AppCompatActivity {
 
 	@UiThread
 	private class WeatherInfoPostExecuter implements Runnable {
+		String _result;
+
+		public WeatherInfoPostExecuter(String result) {
+			_result = result;
+		}
+
 		@Override
 		public void run() {
-			Log.i(DEBUG_TAG, "PostExecute中");
+			String cityName = "";
+			String description = "";
+			try {
+				JSONObject rootJSON = new JSONObject(_result);
+				cityName = rootJSON.getString("name");
+				JSONArray weatherJSONArray = rootJSON.getJSONArray("weather");
+				JSONObject weatherJSON = weatherJSONArray.getJSONObject(0);
+				description = weatherJSON.getString("description");
+			}
+			catch(JSONException ex) {
+				Log.e(DEBUG_TAG, "JSON解析失敗", ex);
+			}
+
+			String telop = cityName + "の天気";
+			String desc = "現在は" + description + "です。";
+			showResult(telop, desc);
 		}
 	}
 }
