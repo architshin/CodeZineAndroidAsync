@@ -32,11 +32,12 @@ import java.util.concurrent.Executors;
 import androidx.annotation.UiThread;
 import androidx.annotation.WorkerThread;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.os.HandlerCompat;
 
 /**
- * 『Androidアプリ開発の教科書』
- * 第11章
+ * CodeZine
  * Web API連携サンプル
+ * Java版
  *
  * アクティビティクラス。
  *
@@ -116,6 +117,12 @@ public class MainActivity extends AppCompatActivity {
 		return list;
 	}
 
+	/**
+	 * 取得したお天気情報を画面に表示するメソッド。
+	 *
+	 * @param telop お天気情報の表題。
+	 * @param desc お天気情報の内容。
+	 */
 	private void showResult(String telop, String desc) {
 		TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
 		TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
@@ -123,6 +130,9 @@ public class MainActivity extends AppCompatActivity {
 		tvWeatherDesc.setText(desc);
 	}
 
+	/**
+	 * リストがタップされた時の処理が記述されたリスナクラス。
+	 */
 	private class ListItemClickListener implements AdapterView.OnItemClickListener {
 		@Override
 		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -134,23 +144,55 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
+	/**
+	 * Web APIにアクセスしてお天気情報を取得するクラス。
+	 */
+	@UiThread
 	private class WeatherInfoReceiver {
-		public void execute(String urlBase, String q, String appId) {
+		/**
+		 * お天気情報の取得処理を行うメソッド。
+		 *
+		 * @param urlBase お天気情報のWeb APIの規定となるURL。
+		 * @param q お天気情報を取得する対象となる都市情報。
+		 * @param appId お天気APIにアクセスするためのAPIキー。
+		 */
+		public void execute(final String urlBase, final String q, final String appId) {
 			Looper mainLooper = Looper.getMainLooper();
-			WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(mainLooper, urlBase, q, appId);
+			Handler handler = HandlerCompat.createAsync(mainLooper);
+			WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(handler, urlBase, q, appId);
 			ExecutorService executorService  = Executors.newSingleThreadExecutor();
 			executorService.submit(backgroundReceiver);
 		}
 	}
 
-	@WorkerThread
+	/**
+	 * 非同期でお天気情報APIにアクセスするためのクラス。
+	 */
 	private class WeatherInfoBackgroundReceiver implements Runnable {
-		Handler _handler;
-		String _urlFull;
-		public WeatherInfoBackgroundReceiver(Looper mainLooper, String urlBase, String q, String appId) {
-			_handler = new Handler(mainLooper);
+		/**
+		 * ハンドラオブジェクト。
+		 */
+		private final Handler _handler;
+		/**
+		 * お天気情報を取得するURLの完全形。
+		 */
+		private final String _urlFull;
+
+		/***
+		 * コンストラクタ。
+		 * 非同期でお天気情報Web APIにアクセスするのに必要な情報を取得する。
+		 *
+		 * @param handler ハンドラオブジェクト。
+		 * @param urlBase お天気情報のWeb APIの規定となるURL。
+		 * @param q お天気情報を取得する対象となる都市情報。
+		 * @param appId お天気APIにアクセスするためのAPIキー。
+		 */
+		public WeatherInfoBackgroundReceiver(Handler handler , String urlBase, String q, String appId) {
+			_handler = handler;
 			_urlFull = urlBase + "&q=" + q + "&appid=" + appId;
 		}
+
+		@WorkerThread
 		@Override
 		public void run() {
 			HttpURLConnection con = null;
@@ -213,10 +255,21 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
+	/**
+	 * 非同期でお天気情報を取得した後にUIスレッドでその情報を表示するためのクラス。
+	 */
 	@UiThread
 	private class WeatherInfoPostExecuter implements Runnable {
-		String _result;
+		/**
+		 * 取得したお天気情報JSON文字列。
+		 */
+		private final String _result;
 
+		/**
+		 * コンストラクタ。
+		 *
+		 * @param result Web APIから取得したお天気情報JSON文字列。
+		 */
 		public WeatherInfoPostExecuter(String result) {
 			_result = result;
 		}
