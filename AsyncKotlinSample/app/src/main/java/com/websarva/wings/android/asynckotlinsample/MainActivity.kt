@@ -14,6 +14,7 @@ import androidx.annotation.WorkerThread
 import androidx.core.os.HandlerCompat
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.lang.StringBuilder
@@ -22,12 +23,35 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.util.concurrent.Executors
 
+/**
+ * CodeZine
+ * Web API連携サンプル
+ * Kotlin版
+ *
+ * アクティビティクラス。
+ *
+ * @author Shinzo SAITO
+ */
 class MainActivity : AppCompatActivity() {
 	companion object {
+		/**
+		 * ログに記載するタグ用の文字列。
+		 */
 		private const val DEBUG_TAG = "AsyncTest"
+		/**
+		 * お天気情報のURL。
+		 */
 		private const val WEATHERINFO_URL = "https://api.openweathermap.org/data/2.5/weather?lang=ja"
+		/**
+		 * お天気APIにアクセスすするためのAPI Key。
+		 * ※※※※※この値は各自のものに書き換える!!※※※※※
+		 */
 		private const val APP_ID = "913136635cfa3182bbe18e34ffd44849"
 	}
+
+	/**
+	 * リストビューに表示させるリストデータ。
+	 */
 	private val _list: MutableList<MutableMap<String, String>> = mutableListOf()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,6 +81,12 @@ class MainActivity : AppCompatActivity() {
 		lvCityList.onItemClickListener = ListItemClickListener()
 	}
 
+	/**
+	 * 取得したお天気情報を画面に表示するメソッド。
+	 *
+	 * @param telop お天気情報の表題。
+	 * @param desc お天気情報の内容。
+	 */
 	@UiThread
 	private fun showResult(telop: String, desc: String) {
 		val tvWeatherTelop = findViewById<TextView>(R.id.tvWeatherTelop)
@@ -65,6 +95,9 @@ class MainActivity : AppCompatActivity() {
 		tvWeatherDesc.text = desc
 	}
 
+	/**
+	 * リストがタップされた時の処理が記述されたリスナクラス。
+	 */
 	private inner class ListItemClickListener: AdapterView.OnItemClickListener {
 		override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
 			val item = _list.get(position)
@@ -76,7 +109,17 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	/**
+	 * Web APIにアクセスしてお天気情報を取得するクラス。
+	 */
 	private inner class WeatherInfoReceiver {
+		/**
+		 * お天気情報の取得処理を行うメソッド。
+		 *
+		 * @param urlBase お天気情報のWeb APIの規定となるURL。
+		 * @param q お天気情報を取得する対象となる都市情報。
+		 * @param appId お天気APIにアクセスするためのAPIキー。
+		 */
 		@UiThread
 		fun execute(urlBase: String, q: String, appId: String) {
 			val handler = HandlerCompat.createAsync(mainLooper)
@@ -86,9 +129,24 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	/**
+	 * 非同期でお天気情報APIにアクセスするためのクラス。
+	 *
+	 * @param handler ハンドラオブジェクト。
+	 * @param urlBase お天気情報のWeb APIの規定となるURL。
+	 * @param q お天気情報を取得する対象となる都市情報。
+	 * @param appId お天気APIにアクセスするためのAPIキー。
+	 */
 	private inner class WeatherInfoBackgroundReceiver(handler: Handler, urlBase: String, q: String, appId: String): Runnable {
-		val _handler = handler
-		val _urlFull = urlBase + "&q=" + q + "&appid=" + appId
+		/**
+		 * ハンドラオブジェクト。
+		 */
+		private val _handler = handler
+		/**
+		 * お天気情報を取得するURLの完全形。
+		 */
+		private val _urlFull = "$urlBase&q=$q&appid=$appId"
+
 		@WorkerThread
 		override fun run() {
 			var result = ""
@@ -111,6 +169,12 @@ class MainActivity : AppCompatActivity() {
 			_handler.post(postExecutor)
 		}
 
+		/**
+		 * InputStreamオブジェクトを文字列に変換するメソッド。 変換文字コードはUTF-8。
+		 *
+		 * @param stream 変換対象のInputStreamオブジェクト。
+		 * @return 変換された文字列。
+		 */
 		private fun is2String(stream: InputStream): String {
 			val sb = StringBuilder()
 			val reader = BufferedReader(InputStreamReader(stream, "UTF-8"))
@@ -124,8 +188,14 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	/**
+	 * 非同期でお天気情報を取得した後にUIスレッドでその情報を表示するためのクラス。
+	 *
+	 * @param result Web APIから取得したお天気情報JSON文字列。
+	 */
 	private inner class WeatherInfoPostExecutor(result: String): Runnable {
-		val _result = result
+		private val _result = result
+
 		@UiThread
 		override fun run() {
 			val rootJSON = JSONObject(_result)
@@ -137,6 +207,5 @@ class MainActivity : AppCompatActivity() {
 			val desc = "現在は" + description + "です。"
 			showResult(telop, desc)
 		}
-
 	}
 }
