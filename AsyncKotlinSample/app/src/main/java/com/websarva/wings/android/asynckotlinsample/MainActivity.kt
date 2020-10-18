@@ -152,15 +152,16 @@ class MainActivity : AppCompatActivity() {
 			var result = ""
 			try {
 				val url = URL(_urlFull)
-				val con = url.openConnection() as HttpURLConnection
-				con.connectTimeout = 1000
-				con.readTimeout = 1000
-				con.requestMethod = "GET"
-				con.connect()
-				val stream = con.inputStream
-				result = is2String(stream)
-				con.disconnect()
-				stream.close()
+				val con = url.openConnection() as? HttpURLConnection
+				con?.run {
+					connectTimeout = 1000
+					readTimeout = 1000
+					requestMethod = "GET"
+					connect()
+					result = is2String(inputStream)
+					disconnect()
+					inputStream.close()
+				}
 			}
 			catch(ex: SocketTimeoutException) {
 				Log.e(DEBUG_TAG, "通信タイムアウト", ex)
