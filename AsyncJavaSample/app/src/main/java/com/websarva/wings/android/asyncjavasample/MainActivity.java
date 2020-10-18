@@ -123,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
 	 * @param telop お天気情報の表題。
 	 * @param desc お天気情報の内容。
 	 */
+	@UiThread
 	private void showResult(String telop, String desc) {
 		TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
 		TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
@@ -147,7 +148,6 @@ public class MainActivity extends AppCompatActivity {
 	/**
 	 * Web APIにアクセスしてお天気情報を取得するクラス。
 	 */
-	@UiThread
 	private class WeatherInfoReceiver {
 		/**
 		 * お天気情報の取得処理を行うメソッド。
@@ -156,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
 		 * @param q お天気情報を取得する対象となる都市情報。
 		 * @param appId お天気APIにアクセスするためのAPIキー。
 		 */
+		@UiThread
 		public void execute(final String urlBase, final String q, final String appId) {
 			Looper mainLooper = Looper.getMainLooper();
 			Handler handler = HandlerCompat.createAsync(mainLooper);
@@ -232,8 +233,8 @@ public class MainActivity extends AppCompatActivity {
 					}
 				}
 			}
-			WeatherInfoPostExecuter postExecuter = new WeatherInfoPostExecuter(result);
-			_handler.post(postExecuter);
+			WeatherInfoPostExecutor postExecutor = new WeatherInfoPostExecutor(result);
+			_handler.post(postExecutor);
 		}
 
 		/**
@@ -258,8 +259,7 @@ public class MainActivity extends AppCompatActivity {
 	/**
 	 * 非同期でお天気情報を取得した後にUIスレッドでその情報を表示するためのクラス。
 	 */
-	@UiThread
-	private class WeatherInfoPostExecuter implements Runnable {
+	private class WeatherInfoPostExecutor implements Runnable {
 		/**
 		 * 取得したお天気情報JSON文字列。
 		 */
@@ -270,10 +270,11 @@ public class MainActivity extends AppCompatActivity {
 		 *
 		 * @param result Web APIから取得したお天気情報JSON文字列。
 		 */
-		public WeatherInfoPostExecuter(String result) {
+		public WeatherInfoPostExecutor(String result) {
 			_result = result;
 		}
 
+		@UiThread
 		@Override
 		public void run() {
 			String cityName = "";
