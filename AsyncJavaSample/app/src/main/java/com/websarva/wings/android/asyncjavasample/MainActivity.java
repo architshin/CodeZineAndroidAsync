@@ -123,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
 	 * @param telop お天気情報の表題。
 	 * @param desc お天気情報の内容。
 	 */
+	@UiThread
 	private void showResult(String telop, String desc) {
 		TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
 		TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
