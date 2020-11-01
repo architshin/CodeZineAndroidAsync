@@ -140,30 +140,24 @@ public class MainActivity extends AppCompatActivity {
 			Map<String, String> item = _list.get(position);
 			String q = item.get("q");
 
-			WeatherInfoReceiver receiver = new WeatherInfoReceiver();
-			receiver.execute(WEATHERINFO_URL, q, APP_ID);
+			receiveWeatherInfo(WEATHERINFO_URL, q, APP_ID);
 		}
 	}
 
 	/**
-	 * Web APIにアクセスしてお天気情報を取得するクラス。
+	 * お天気情報の取得処理を行うメソッド。
+	 *
+	 * @param urlBase お天気情報のWeb APIの規定となるURL。
+	 * @param q お天気情報を取得する対象となる都市情報。
+	 * @param appId お天気APIにアクセスするためのAPIキー。
 	 */
-	private class WeatherInfoReceiver {
-		/**
-		 * お天気情報の取得処理を行うメソッド。
-		 *
-		 * @param urlBase お天気情報のWeb APIの規定となるURL。
-		 * @param q お天気情報を取得する対象となる都市情報。
-		 * @param appId お天気APIにアクセスするためのAPIキー。
-		 */
-		@UiThread
-		public void execute(final String urlBase, final String q, final String appId) {
-			Looper mainLooper = Looper.getMainLooper();
-			Handler handler = HandlerCompat.createAsync(mainLooper);
-			WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(handler, urlBase, q, appId);
-			ExecutorService executorService  = Executors.newSingleThreadExecutor();
-			executorService.submit(backgroundReceiver);
-		}
+	@UiThread
+	public void receiveWeatherInfo(final String urlBase, final String q, final String appId) {
+		Looper mainLooper = Looper.getMainLooper();
+		Handler handler = HandlerCompat.createAsync(mainLooper);
+		WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(handler, urlBase, q, appId);
+		ExecutorService executorService  = Executors.newSingleThreadExecutor();
+		executorService.submit(backgroundReceiver);
 	}
 
 	/**
