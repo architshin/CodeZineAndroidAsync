@@ -37,7 +37,7 @@ import androidx.core.os.HandlerCompat;
 /**
  * CodeZine
  * Web API連携サンプル
- * Java版
+ * Java版のスケルトンプロジェクト
  *
  * アクティビティクラス。
  *
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
 	 * お天気APIにアクセスすするためのAPI Key。
 	 * ※※※※※この値は各自のものに書き換える!!※※※※※
 	 */
-	private static final String APP_ID = "913136635cfa3182bbe18e34ffd44849";
+	private static final String APP_ID = "";
 	/**
 	 * リストビューに表示させるリストデータ。
 	 */
@@ -139,8 +139,59 @@ public class MainActivity extends AppCompatActivity {
 		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 			Map<String, String> item = _list.get(position);
 			String q = item.get("q");
+			String url = WEATHERINFO_URL + "&q=" + q + "&appid=" + APP_ID;
 
-			receiveWeatherInfo(WEATHERINFO_URL, q, APP_ID);
+			asyncExecute();
+		}
+	}
+
+	/**
+	 * 非同期でお天気情報の取得処理を行うメソッド。
+	 */
+	@UiThread
+	public void asyncExecute() {
+		Looper mainLooper = Looper.getMainLooper();
+		Handler handler = HandlerCompat.createAsync(mainLooper);
+		BackgroundTask backgroundTask = new BackgroundTask(handler);
+		ExecutorService executorService  = Executors.newSingleThreadExecutor();
+		executorService.submit(backgroundTask);
+	}
+
+	/**
+	 * バックグラウンド処理用クラス。
+	 */
+	private class BackgroundTask implements Runnable {
+		/**
+		 * UIスレッドを表すハンドラオブジェクト。
+		 */
+		private final Handler _handler;
+
+		/**
+		 * コンストラクタ。
+		 *
+		 * @param handler UIスレッドを表すハンドラオブジェクト。
+		 */
+		public BackgroundTask(Handler handler) {
+			_handler = handler;
+		}
+
+		@WorkerThread
+		@Override
+		public void run() {
+			Log.i("Async-BackgroundTask", "ここに非同期処理を記述する");
+			PostExecutor postExecutor = new PostExecutor();
+			_handler.post(postExecutor);
+		}
+	}
+
+	/**
+	 * バックグラウンドスレッドの終了後にUIスレッドで行う処理用クラス。
+	 */
+	private class PostExecutor implements Runnable {
+		@UiThread
+		@Override
+		public void run() {
+			Log.i("Async-PostExecutor", "ここにUIスレッドで行いたい処理を記述する");
 		}
 	}
 
