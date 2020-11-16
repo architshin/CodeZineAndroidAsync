@@ -118,20 +118,6 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	/**
-	 * 取得したお天気情報を画面に表示するメソッド。
-	 *
-	 * @param telop お天気情報の表題。
-	 * @param desc お天気情報の内容。
-	 */
-	@UiThread
-	private void showResult(String telop, String desc) {
-		TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
-		TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
-		tvWeatherTelop.setText(telop);
-		tvWeatherDesc.setText(desc);
-	}
-
-	/**
 	 * リストがタップされた時の処理が記述されたリスナクラス。
 	 */
 	private class ListItemClickListener implements AdapterView.OnItemClickListener {
@@ -139,52 +125,47 @@ public class MainActivity extends AppCompatActivity {
 		public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 			Map<String, String> item = _list.get(position);
 			String q = item.get("q");
+			String url = WEATHERINFO_URL + "&q=" + q + "&appid=" + APP_ID;
 
-			receiveWeatherInfo(WEATHERINFO_URL, q, APP_ID);
+			asyncExecute(url);
 		}
 	}
 
 	/**
 	 * お天気情報の取得処理を行うメソッド。
 	 *
-	 * @param urlBase お天気情報のWeb APIの規定となるURL。
-	 * @param q お天気情報を取得する対象となる都市情報。
-	 * @param appId お天気APIにアクセスするためのAPIキー。
+	 * @param url お天気情報を取得するURL。
 	 */
 	@UiThread
-	public void receiveWeatherInfo(final String urlBase, final String q, final String appId) {
+	public void asyncExecute(final String url) {
 		Looper mainLooper = Looper.getMainLooper();
 		Handler handler = HandlerCompat.createAsync(mainLooper);
-		WeatherInfoBackgroundReceiver backgroundReceiver = new WeatherInfoBackgroundReceiver(handler, urlBase, q, appId);
+		BackgroundTask backgroundTask = new BackgroundTask(handler, url);
 		ExecutorService executorService  = Executors.newSingleThreadExecutor();
-		executorService.submit(backgroundReceiver);
+		executorService.submit(backgroundTask);
 	}
 
 	/**
-	 * 非同期でお天気情報APIにアクセスするためのクラス。
+	 * 非同期でお天気情報APIにアクセスするためのクラス
 	 */
-	private class WeatherInfoBackgroundReceiver implements Runnable {
+	private class BackgroundTask implements Runnable {
 		/**
-		 * ハンドラオブジェクト。
+		 * UIスレッドを表すハンドラオブジェクト。
 		 */
 		private final Handler _handler;
 		/**
-		 * お天気情報を取得するURLの完全形。
+		 * お天気情報を取得するURL。
 		 */
-		private final String _urlFull;
+		private final String _url;
 
-		/***
+		/**
 		 * コンストラクタ。
-		 * 非同期でお天気情報Web APIにアクセスするのに必要な情報を取得する。
 		 *
-		 * @param handler ハンドラオブジェクト。
-		 * @param urlBase お天気情報のWeb APIの規定となるURL。
-		 * @param q お天気情報を取得する対象となる都市情報。
-		 * @param appId お天気APIにアクセスするためのAPIキー。
+		 * @param handler UIスレッドを表すハンドラオブジェクト。
 		 */
-		public WeatherInfoBackgroundReceiver(Handler handler , String urlBase, String q, String appId) {
+		public BackgroundTask(Handler handler, String url) {
 			_handler = handler;
-			_urlFull = urlBase + "&q=" + q + "&appid=" + appId;
+			_url = url;
 		}
 
 		@WorkerThread
@@ -195,10 +176,8 @@ public class MainActivity extends AppCompatActivity {
 			String result = "";
 
 			try {
-				URL url = new URL(_urlFull);
+				URL url = new URL(_url);
 				con = (HttpURLConnection) url.openConnection();
-				con.setConnectTimeout(1000);
-				con.setReadTimeout(1000);
 				con.setRequestMethod("GET");
 				con.connect();
 				is = con.getInputStream();
@@ -207,9 +186,6 @@ public class MainActivity extends AppCompatActivity {
 			}
 			catch(MalformedURLException ex) {
 				Log.e(DEBUG_TAG, "URL変換失敗", ex);
-			}
-			catch(SocketTimeoutException ex) {
-				Log.w(DEBUG_TAG, "通信タイムアウト", ex);
 			}
 			catch(IOException ex) {
 				Log.e(DEBUG_TAG, "通信失敗", ex);
@@ -227,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
 					}
 				}
 			}
-			WeatherInfoPostExecutor postExecutor = new WeatherInfoPostExecutor(result);
+			PostExecutor postExecutor = new PostExecutor(result);
 			_handler.post(postExecutor);
 		}
 
@@ -253,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
 	/**
 	 * 非同期でお天気情報を取得した後にUIスレッドでその情報を表示するためのクラス。
 	 */
-	private class WeatherInfoPostExecutor implements Runnable {
+	private class PostExecutor implements Runnable {
 		/**
 		 * 取得したお天気情報JSON文字列。
 		 */
@@ -264,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
 		 *
 		 * @param result Web APIから取得したお天気情報JSON文字列。
 		 */
-		public WeatherInfoPostExecutor(String result) {
+		public PostExecutor(String result) {
 			_result = result;
 		}
 
@@ -272,21 +248,24 @@ public class MainActivity extends AppCompatActivity {
 		@Override
 		public void run() {
 			String cityName = "";
-			String description = "";
+			String weather = "";
 			try {
 				JSONObject rootJSON = new JSONObject(_result);
 				cityName = rootJSON.getString("name");
 				JSONArray weatherJSONArray = rootJSON.getJSONArray("weather");
 				JSONObject weatherJSON = weatherJSONArray.getJSONObject(0);
-				description = weatherJSON.getString("description");
+				weather = weatherJSON.getString("description");
 			}
 			catch(JSONException ex) {
 				Log.e(DEBUG_TAG, "JSON解析失敗", ex);
 			}
 
 			String telop = cityName + "の天気";
-			String desc = "現在は" + description + "です。";
-			showResult(telop, desc);
+			String desc = "現在は" + weather + "です。";
+			TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
+			TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
+			tvWeatherTelop.setText(telop);
+			tvWeatherDesc.setText(desc);
 		}
 	}
 }
