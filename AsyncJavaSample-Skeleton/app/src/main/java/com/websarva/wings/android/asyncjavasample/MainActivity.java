@@ -8,6 +8,10 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -152,6 +156,24 @@ public class MainActivity extends AppCompatActivity {
 		public void run() {
 			PostExecutor postExecutor = new PostExecutor();
 			_handler.post(postExecutor);
+		}
+
+		/**
+		 * InputStreamオブジェクトを文字列に変換するメソッド。 変換文字コードはUTF-8。
+		 *
+		 * @param is 変換対象のInputStreamオブジェクト。
+		 * @return 変換された文字列。
+		 * @throws IOException 変換に失敗した時に発生。
+		 */
+		private String is2String(InputStream is) throws IOException {
+			BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+			StringBuffer sb = new StringBuffer();
+			char[] b = new char[1024];
+			int line;
+			while(0 <= (line = reader.read(b))) {
+				sb.append(b, 0, line);
+			}
+			return sb.toString();
 		}
 	}
 
