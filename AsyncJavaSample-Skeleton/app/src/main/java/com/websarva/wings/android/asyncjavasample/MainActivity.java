@@ -3,25 +3,15 @@ package com.websarva.wings.android.asyncjavasample;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
-import android.widget.TextView;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.SocketTimeoutException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +27,7 @@ import androidx.core.os.HandlerCompat;
 /**
  * CodeZine
  * Web API連携サンプル
- * Java版
+ * Java版のスケルトンプロジェクト
  *
  * アクティビティクラス。
  *
@@ -127,20 +117,18 @@ public class MainActivity extends AppCompatActivity {
 			String q = item.get("q");
 			String url = WEATHERINFO_URL + "&q=" + q + "&appid=" + APP_ID;
 
-			asyncExecute(url);
+			asyncExecute();
 		}
 	}
 
 	/**
 	 * お天気情報の取得処理を行うメソッド。
-	 *
-	 * @param url お天気情報を取得するURL。
 	 */
 	@UiThread
-	public void asyncExecute(final String url) {
+	public void asyncExecute() {
 		Looper mainLooper = Looper.getMainLooper();
 		Handler handler = HandlerCompat.createAsync(mainLooper);
-		BackgroundTask backgroundTask = new BackgroundTask(handler, url);
+		BackgroundTask backgroundTask = new BackgroundTask(handler);
 		ExecutorService executorService  = Executors.newSingleThreadExecutor();
 		executorService.submit(backgroundTask);
 	}
@@ -153,57 +141,20 @@ public class MainActivity extends AppCompatActivity {
 		 * UIスレッドを表すハンドラオブジェクト。
 		 */
 		private final Handler _handler;
-		/**
-		 * お天気情報を取得するURL。
-		 */
-		private final String _url;
 
 		/**
 		 * コンストラクタ。
 		 *
 		 * @param handler UIスレッドを表すハンドラオブジェクト。
 		 */
-		public BackgroundTask(Handler handler, String url) {
+		public BackgroundTask(Handler handler) {
 			_handler = handler;
-			_url = url;
 		}
 
 		@WorkerThread
 		@Override
 		public void run() {
-			HttpURLConnection con = null;
-			InputStream is = null;
-			String result = "";
-
-			try {
-				URL url = new URL(_url);
-				con = (HttpURLConnection) url.openConnection();
-				con.setRequestMethod("GET");
-				con.connect();
-				is = con.getInputStream();
-
-				result = is2String(is);
-			}
-			catch(MalformedURLException ex) {
-				Log.e(DEBUG_TAG, "URL変換失敗", ex);
-			}
-			catch(IOException ex) {
-				Log.e(DEBUG_TAG, "通信失敗", ex);
-			}
-			finally {
-				if(con != null) {
-					con.disconnect();
-				}
-				if(is != null) {
-					try {
-						is.close();
-					}
-					catch(IOException ex) {
-						Log.e(DEBUG_TAG, "InputStream解放失敗", ex);
-					}
-				}
-			}
-			PostExecutor postExecutor = new PostExecutor(result);
+			PostExecutor postExecutor = new PostExecutor();
 			_handler.post(postExecutor);
 		}
 
@@ -230,42 +181,9 @@ public class MainActivity extends AppCompatActivity {
 	 * 非同期でお天気情報を取得した後にUIスレッドでその情報を表示するためのクラス。
 	 */
 	private class PostExecutor implements Runnable {
-		/**
-		 * 取得したお天気情報JSON文字列。
-		 */
-		private final String _result;
-
-		/**
-		 * コンストラクタ。
-		 *
-		 * @param result Web APIから取得したお天気情報JSON文字列。
-		 */
-		public PostExecutor(String result) {
-			_result = result;
-		}
-
 		@UiThread
 		@Override
 		public void run() {
-			String cityName = "";
-			String weather = "";
-			try {
-				JSONObject rootJSON = new JSONObject(_result);
-				cityName = rootJSON.getString("name");
-				JSONArray weatherJSONArray = rootJSON.getJSONArray("weather");
-				JSONObject weatherJSON = weatherJSONArray.getJSONObject(0);
-				weather = weatherJSON.getString("description");
-			}
-			catch(JSONException ex) {
-				Log.e(DEBUG_TAG, "JSON解析失敗", ex);
-			}
-
-			String telop = cityName + "の天気";
-			String desc = "現在は" + weather + "です。";
-			TextView tvWeatherTelop = findViewById(R.id.tvWeatherTelop);
-			TextView tvWeatherDesc = findViewById(R.id.tvWeatherDesc);
-			tvWeatherTelop.setText(telop);
-			tvWeatherDesc.setText(desc);
 		}
 	}
 }
