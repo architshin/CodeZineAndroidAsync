@@ -1,9 +1,6 @@
 package com.websarva.wings.android.asynccoroutinesample
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ListView
@@ -11,17 +8,17 @@ import android.widget.SimpleAdapter
 import android.widget.TextView
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.lang.StringBuilder
 import java.net.HttpURLConnection
-import java.net.SocketTimeoutException
 import java.net.URL
-import kotlin.coroutines.CoroutineContext
 
 /**
  * CodeZine
@@ -52,26 +49,13 @@ class MainActivity : AppCompatActivity() {
 	/**
 	 * リストビューに表示させるリストデータ。
 	 */
-	private val _list: MutableList<MutableMap<String, String>> = mutableListOf()
+	private var _list: MutableList<MutableMap<String, String>> = mutableListOf()
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		setContentView(R.layout.activity_main)
 
-		var city = mutableMapOf("name" to "大阪", "q" to "Osaka")
-		_list.add(city)
-		city = mutableMapOf("name" to "神戸", "q" to "Kobe")
-		_list.add(city)
-		city = mutableMapOf("name" to "京都", "q" to "Kyoto")
-		_list.add(city)
-		city = mutableMapOf("name" to "大津", "q" to "Otsu")
-		_list.add(city)
-		city = mutableMapOf("name" to "奈良", "q" to "Nara")
-		_list.add(city)
-		city = mutableMapOf("name" to "和歌山", "q" to "Wakayama")
-		_list.add(city)
-		city = mutableMapOf("name" to "姫路", "q" to "Himeji")
-		_list.add(city)
+		_list = createList()
 
 		val lvCityList = findViewById<ListView>(R.id.lvCityList)
 		val from  = arrayOf("name")
@@ -81,32 +65,65 @@ class MainActivity : AppCompatActivity() {
 		lvCityList.onItemClickListener = ListItemClickListener()
 	}
 
+	/**
+	 * リストビューに表示させる天気ポイントリストデータを生成するメソッド。
+	 *
+	 * @return 生成された天気ポイントリストデータ。
+	 */
+	private fun createList(): MutableList<MutableMap<String, String>> {
+		var list: MutableList<MutableMap<String, String>> = mutableListOf()
+
+		var city = mutableMapOf("name" to "大阪", "q" to "Osaka")
+		list.add(city)
+		city = mutableMapOf("name" to "神戸", "q" to "Kobe")
+		list.add(city)
+		city = mutableMapOf("name" to "京都", "q" to "Kyoto")
+		list.add(city)
+		city = mutableMapOf("name" to "大津", "q" to "Otsu")
+		list.add(city)
+		city = mutableMapOf("name" to "奈良", "q" to "Nara")
+		list.add(city)
+		city = mutableMapOf("name" to "和歌山", "q" to "Wakayama")
+		list.add(city)
+		city = mutableMapOf("name" to "姫路", "q" to "Himeji")
+		list.add(city)
+
+		return list;
+	}
+
+	/**
+	 * リストがタップされた時の処理が記述されたリスナクラス。
+	 */
+	private inner class ListItemClickListener: AdapterView.OnItemClickListener {
+		override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+			val item = _list.get(position)
+			val q = item.get("q")
+			q?.let {
+				val url = "$WEATHERINFO_URL&q=$q&appid=$APP_ID"
+				asyncExecute(url)
+			}
+		}
+	}
+
 	@UiThread
-	private fun weatherInfoReceiver(urlBase: String, q: String, appId: String) {
+	private fun asyncExecute(url: String) {
 		lifecycleScope.launch {
-			val result = weatherInfoBackgroundReceiver(urlBase, q, appId)
+			val result = backgroundTaskRunner(url)
 			showResult(result)
 		}
 	}
 
 	@WorkerThread
-	private suspend fun weatherInfoBackgroundReceiver(urlBase: String, q: String, appId: String): String = withContext(Dispatchers.IO) {
-		val urlFull = "$urlBase&q=$q&appid=$appId"
+	private suspend fun backgroundTaskRunner(url: String): String = withContext(Dispatchers.IO) {
 		var result = ""
-		try {
-			val url = URL(urlFull)
-			val con = url.openConnection() as? HttpURLConnection
-			con?.run {
-				connectTimeout = 1000
-				readTimeout = 1000
-				requestMethod = "GET"
-				connect()
-				result = is2String(inputStream)
-				disconnect()
-				inputStream.close()
-			}
-		} catch (ex: SocketTimeoutException) {
-			Log.e(DEBUG_TAG, "通信タイムアウト", ex)
+		val url = URL(url)
+		val con = url.openConnection() as? HttpURLConnection
+		con?.run {
+			requestMethod = "GET"
+			connect()
+			result = is2String(inputStream)
+			disconnect()
+			inputStream.close()
 		}
 		result
 	}
@@ -148,18 +165,5 @@ class MainActivity : AppCompatActivity() {
 		}
 		reader.close()
 		return sb.toString()
-	}
-
-	/**
-	 * リストがタップされた時の処理が記述されたリスナクラス。
-	 */
-	private inner class ListItemClickListener: AdapterView.OnItemClickListener {
-		override fun onItemClick(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-			val item = _list.get(position)
-			val q = item.get("q")
-			q?.let {
-				weatherInfoReceiver(WEATHERINFO_URL, it, APP_ID)
-			}
-		}
 	}
 }
