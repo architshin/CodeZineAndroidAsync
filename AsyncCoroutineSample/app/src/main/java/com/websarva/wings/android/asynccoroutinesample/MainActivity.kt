@@ -24,7 +24,7 @@ import java.net.URL
 /**
  * CodeZine
  * Web API連携サンプル
- * Kotlin版
+ * Kotlinコルーチン版
  *
  * アクティビティクラス。
  *
