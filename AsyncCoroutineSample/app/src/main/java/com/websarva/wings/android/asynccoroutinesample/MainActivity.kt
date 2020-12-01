@@ -1,6 +1,7 @@
 package com.websarva.wings.android.asynccoroutinesample
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ListView
@@ -109,23 +110,26 @@ class MainActivity : AppCompatActivity() {
 	private fun asyncExecute(url: String) {
 		lifecycleScope.launch {
 			val result = backgroundTaskRunner(url)
-			showResult(result)
+			postExecutorRunner(result)
 		}
 	}
 
 	@WorkerThread
-	private suspend fun backgroundTaskRunner(url: String): String = withContext(Dispatchers.IO) {
-		var result = ""
-		val url = URL(url)
-		val con = url.openConnection() as? HttpURLConnection
-		con?.run {
-			requestMethod = "GET"
-			connect()
-			result = is2String(inputStream)
-			disconnect()
-			inputStream.close()
+	private suspend fun backgroundTaskRunner(url: String): String  {
+		val returnVal = withContext(Dispatchers.IO) {
+			var result = ""
+			val url = URL(url)
+			val con = url.openConnection() as? HttpURLConnection
+			con?.run {
+				requestMethod = "GET"
+				connect()
+				result = is2String(inputStream)
+				disconnect()
+				inputStream.close()
+			}
+			result
 		}
-		result
+		return returnVal
 	}
 
 	/**
@@ -134,7 +138,7 @@ class MainActivity : AppCompatActivity() {
 	 * @param result Web APIから取得したお天気情報JSON文字列。
 	 */
 	@UiThread
-	private fun showResult(result: String) {
+	private fun postExecutorRunner(result: String) {
 		val rootJSON = JSONObject(result)
 		val cityName = rootJSON.getString("name")
 		val weatherJSONArray = rootJSON.getJSONArray("weather")
