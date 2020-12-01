@@ -1,7 +1,6 @@
 package com.websarva.wings.android.asynccoroutinesample
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ListView
@@ -106,6 +105,11 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	/**
+	 * お天気情報の取得処理を行うメソッド。
+	 *
+	 * @param url お天気情報を取得するURL。
+	 */
 	@UiThread
 	private fun asyncExecute(url: String) {
 		lifecycleScope.launch {
@@ -114,6 +118,12 @@ class MainActivity : AppCompatActivity() {
 		}
 	}
 
+	/**
+	 * 非同期でお天気情報APIにアクセスするためのクラス。
+	 *
+	 * @param url お天気情報を取得するURL。
+	 * @return Web APIから取得したお天気情報JSON文字列。
+	 */
 	@WorkerThread
 	private suspend fun backgroundTaskRunner(url: String): String  {
 		val returnVal = withContext(Dispatchers.IO) {
