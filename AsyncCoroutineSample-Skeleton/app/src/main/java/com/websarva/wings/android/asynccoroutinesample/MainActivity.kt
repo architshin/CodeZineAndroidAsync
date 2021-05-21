@@ -1,5 +1,6 @@
 package com.websarva.wings.android.asynccoroutinesample
 
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
@@ -8,11 +9,6 @@ import android.widget.SimpleAdapter
 import android.widget.TextView
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStream
@@ -23,7 +19,7 @@ import java.net.URL
 /**
  * CodeZine
  * Web API連携サンプル
- * Kotlinコルーチン版
+ * Kotlinコルーチン版スケルトンプロジェクト
  *
  * アクティビティクラス。
  *
@@ -112,10 +108,6 @@ class MainActivity : AppCompatActivity() {
 	 */
 	@UiThread
 	private fun asyncExecute(url: String) {
-		lifecycleScope.launch {
-			val result = backgroundTaskRunner(url)
-			postExecutorRunner(result)
-		}
 	}
 
 	/**
@@ -125,21 +117,18 @@ class MainActivity : AppCompatActivity() {
 	 * @return Web APIから取得したお天気情報JSON文字列。
 	 */
 	@WorkerThread
-	private suspend fun backgroundTaskRunner(url: String): String  {
-		val returnVal = withContext(Dispatchers.IO) {
-			var result = ""
-			val url = URL(url)
-			val con = url.openConnection() as? HttpURLConnection
-			con?.run {
-				requestMethod = "GET"
-				connect()
-				result = is2String(inputStream)
-				disconnect()
-				inputStream.close()
-			}
-			result
+	private fun backgroundTaskRunner(url: String): String  {
+		var result = ""
+		val url = URL(url)
+		val con = url.openConnection() as? HttpURLConnection
+		con?.run {
+			requestMethod = "GET"
+			connect()
+			result = is2String(inputStream)
+			disconnect()
+			inputStream.close()
 		}
-		return returnVal
+		return result
 	}
 
 	/**
